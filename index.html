@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mission Control</title>
+<style>
+  :root { --ink:#0d0f12; --panel:#161a20; --line:#232833; --txt:#e8e6e1; --dim:#8a919e; --amber:#ffb340; --teal:#2fd5c8; --red:#ff5a4e; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--ink); color:var(--txt); font:14px/1.5 -apple-system, "SF Mono", ui-monospace, monospace; padding:24px 16px 64px; max-width:860px; margin:0 auto; }
+  h1 { font-size:20px; letter-spacing:.12em; text-transform:uppercase; }
+  h1 span { color:var(--amber); }
+  .sub { color:var(--dim); font-size:12px; margin:4px 0 20px; }
+  h2 { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--amber); margin:26px 0 10px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 16px; margin-bottom:10px; }
+  .row { display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:3px 0; align-items:baseline; }
+  .name { font-weight:600; font-size:13px; }
+  .what { color:var(--dim); font-size:12px; grid-column:1; }
+  .next { color:var(--teal); font-size:11px; text-align:right; white-space:nowrap; }
+  .note { color:var(--dim); font-size:11px; }
+  .date { color:var(--amber); font-weight:700; font-size:12px; min-width:78px; display:inline-block; }
+  .who { color:var(--teal); font-size:11px; }
+  .locked { color:var(--dim); font-size:12px; }
+  #lockbox input { background:#0a0c0f; border:1px solid var(--line); color:var(--txt); padding:8px 10px; border-radius:8px; font:inherit; width:120px; }
+  #lockbox button { background:var(--amber); color:var(--ink); border:0; padding:8px 14px; border-radius:8px; font:inherit; font-weight:700; cursor:pointer; }
+  .foot { color:var(--dim); font-size:11px; margin-top:22px; }
+  a { color:var(--teal); text-decoration:none; }
+</style>
+</head>
+<body>
+<h1>Mission <span>Control</span></h1>
+<div class="sub" id="updated">locked</div>
+<div class="card" id="lockbox">
+  <div class="locked">enter PIN to unlock</div>
+  <div style="margin-top:8px"><input id="pin" type="password" inputmode="numeric" placeholder="PIN"> <button onclick="unlock()">unlock</button></div>
+  <div class="locked" id="perr" style="margin-top:6px"></div>
+</div>
+<div id="board" style="display:none"></div>
+<div class="foot">rebuilt by instinct every 6h · labels and status only, no dollar figures · <a href="https://iconiczack93.github.io/kalshi-valorant-dash/">kalshi dashboard</a></div>
+<script>
+const BLOB = {"salt": "R3zDRWv8tMAOG0/1fi766Q==", "iv": "+XLnheyA/qeUssXc", "data": "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"};
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function render(D){
+  document.getElementById('updated').textContent = 'rebuilt ' + D.ts;
+  const b = document.getElementById('board');
+  let h = '';
+  h += '<h2>Active watches</h2>';
+  h += D.watches.map(w=>`<div class="card"><div class="row"><span class="name">${esc(w.name)}</span><span class="next">${esc(w.next)}</span><span class="what">${esc(w.what)}${w.link?` · <a href="${w.link}" target="_blank">dashboard</a>`:''}</span><span class="next">${esc(w.cadence)}</span></div>${w.note?`<div class="note">${esc(w.note)}</div>`:''}</div>`).join('');
+  h += '<h2>Upcoming dates</h2><div class="card">';
+  h += D.dates.map(x=>`<div class="row" style="grid-template-columns:78px 1fr auto"><span class="date">${esc(x.d)}</span><span class="name">${esc(x.label)}</span><span class="note">${esc(x.note)}</span></div>`).join('');
+  h += '</div>';
+  h += '<h2>Open decisions</h2><div class="card">';
+  h += D.decisions.map(x=>`<div class="row" style="grid-template-columns:1fr auto"><span class="name">${esc(x.label)}</span><span class="who">waiting: ${esc(x.waiting)}</span>${x.note?`<span class="note" style="grid-column:1">${esc(x.note)}</span>`:''}</div>`).join('');
+  h += '</div>';
+  h += '<h2>Recently landed</h2><div class="card">';
+  h += D.landed.map(x=>`<div class="row" style="grid-template-columns:78px 1fr auto"><span class="date">${esc(x.d)}</span><span class="name">${esc(x.label)}</span><span class="note">${esc(x.note)}</span></div>`).join('');
+  h += '</div>';
+  h += '<h2>Proposed new watches</h2><div class="card">';
+  h += D.proposed.map(x=>`<div class="row" style="grid-template-columns:1fr auto"><span class="name">${esc(x.idea)}</span><span class="note">${esc(x.note)}</span></div>`).join('');
+  h += '</div>';
+  b.innerHTML = h;
+  b.style.display = 'block';
+  document.getElementById('lockbox').style.display = 'none';
+}
+async function unlock(){
+  const pin=document.getElementById('pin').value, err=document.getElementById('perr');
+  try{
+    const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+    const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveKey']);
+    const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(BLOB.salt),iterations:200000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
+    const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(BLOB.iv)},key,b64(BLOB.data));
+    render(JSON.parse(new TextDecoder().decode(pt)));
+  }catch(e){ err.textContent='wrong pin (or bad decrypt)'; }
+}
+document.getElementById('pin').addEventListener('keydown',e=>{ if(e.key==='Enter') unlock(); });
+</script>
+</body>
+</html>
